@@ -1,0 +1,24 @@
+{
+  "name": "amazonscraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "AmazonScraper.js",
+  "dependencies": {
+    "puppeteer": "^5.3.1",
+    "request": "^2.88.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JavaJonathan/AmazonScraper.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JavaJonathan/AmazonScraper/issues"
+  },
+  "homepage": "https://github.com/JavaJonathan/AmazonScraper#readme"
+}
