@@ -48,21 +48,33 @@ async function listProductsOnShopify(page)
 async function listItem(page)
 {
     await page.waitForSelector('input[name="title"]')
+    await page.click('input[name="title"]')
     await page.type('input[name="title"]', `${products[0].Title}`)
     await page.click('button[aria-describedby="PolarisTooltipContent5"]')
-    await page.waitForTimeout(250)
 
+    await page.click('iframe[title="Rich Text Area. Press ALT-F9 for menu. Press ALT-F10 for toolbar. Press ALT-0 for help"]')
     for(let counter = 0; counter < products[0].Descriptions.length; counter++)
     {
         await page.type('iframe[title="Rich Text Area. Press ALT-F9 for menu. Press ALT-F10 for toolbar. Press ALT-0 for help"]', `${products[0].Descriptions[counter]}`)
         await page.keyboard.press('Enter'); 
     }
 
-    await page.click('span[class="Polaris-Button__Text_yj3uv"]')
+    await page.keyboard.press('Backspace'); 
+
+    // await page.click('span[class="Polaris-Button__Text_yj3uv"]')
 
     await page.type('input[name="price"]', `${products[0].Price}`) 
-    await page.click('input[id="InventoryTrackingAllowOutOfStockPurchases"]')
+    await page.waitForTimeout(250)
+
+    let checkBoxElements = await page.$$('span[class="Polaris-Checkbox__Backdrop_1x2i2"]')
+    await checkBoxElements[2].click()
+    await page.waitForTimeout(250)
+
+    await page.click('input[id="AdjustQuantityPopoverTextFieldActivator"]')
+    await page.keyboard.press('Delete'); 
     await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5')
+    await page.waitForTimeout(250)
+
     await page.type('input[id="PolarisTextField7"]', `${products[0].Brand}`)
 }
 
