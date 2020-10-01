@@ -1,3 +1,4 @@
+const { count } = require('console');
 var fs = require('fs'), request = require('request'), puppeteer = require('puppeteer'), readWrite = require('fs');
 const { Agent } = require('http');
 
@@ -18,6 +19,11 @@ async function startBot()
     await grabBotConfigs(page)
     await scrapeAmazonItems(page)
     await listProductsOnShopify(page)
+}
+
+async function getPassedBotCheck(page)
+{
+    await page.waitForSelector('input[id="twotabsearchtextbox"]')
 }
 
 async function grabBotConfigs(page)
@@ -47,51 +53,131 @@ async function listProductsOnShopify(page)
 
 async function listItem(page)
 {
-    await page.waitForSelector('input[name="title"]')
-    await page.click('input[name="title"]')
-    await page.type('input[name="title"]', `${products[0].Title}`)
-    await page.click('button[aria-describedby="PolarisTooltipContent5"]')
-
-    await page.click('iframe[title="Rich Text Area. Press ALT-F9 for menu. Press ALT-F10 for toolbar. Press ALT-0 for help"]')
-    for(let counter = 0; counter < products[0].Descriptions.length; counter++)
-    {
-        await page.type('iframe[title="Rich Text Area. Press ALT-F9 for menu. Press ALT-F10 for toolbar. Press ALT-0 for help"]', `${products[0].Descriptions[counter]}`)
-        await page.keyboard.press('Enter'); 
-    }
-
-    await page.keyboard.press('Backspace'); 
-
-    // await page.click('span[class="Polaris-Button__Text_yj3uv"]')
+    await makeListingInactive(page)
+    await addShopifyTitle(page)    
+    await addShopifyDescription(page)
+    await uploadImageUrls(page)
 
     await page.type('input[name="price"]', `${products[0].Price}`) 
     await page.waitForTimeout(250)
 
-    let checkBoxElements = await page.$$('span[class="Polaris-Checkbox__Backdrop_1x2i2"]')
-    await checkBoxElements[2].click()
-    await page.waitForTimeout(250)
+    await checkBackOrderCheckBox(page)
+    await addShopifyQuantity(page)
 
+    await page.type('input[id="PolarisTextField7"]', `${products[0].Brand}`)
+}
+
+async function makeListingInactive(page)
+{
+    await page.waitForSelector('span[class="Polaris-Button__Text_yj3uv"]')
+    let buttonElements = await page.$$('span[class="Polaris-Button__Text_yj3uv"]')
+    for (let counter = 0; counter < buttonElements.length; counter++)
+    {
+        let buttonText = await page.evaluate(el => el.textContent, buttonElements[counter])
+        if(buttonText == "Manage")
+        {
+            await buttonElements[counter].click()
+            break
+        }
+    }
+
+    await page.waitForSelector('button[class="Polaris-Modal-CloseButton_bl13t"]')
+    let storeCheckBoxElements = await page.$$('span[class="Polaris-Checkbox_1d6zr"]')
+    for (let counter = 0; counter < storeCheckBoxElements.length; counter++)
+    {
+        await page.waitForTimeout(250)
+        await storeCheckBoxElements[counter].click()
+    }
+
+    let closeModalElements = await page.$$('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs"]')
+    for (let counter = 0; counter < closeModalElements.length; counter++)
+    {
+        let buttonText = await page.evaluate(el => el.textContent, closeModalElements[counter])
+        if(buttonText == "Done")
+        {
+            await closeModalElements[counter].click()
+            break
+        }
+    }
+}
+
+async function uploadImageUrls(page)
+{
+    for(let counter = 0; counter < products[0].ImageLinks.length; counter++)
+    {
+        await page.waitForTimeout(500)
+        await page.waitForSelector('button[aria-controls="Polarispopover6"]')
+        await page.click('button[aria-controls="Polarispopover6"]')
+        let imageUrlElements = await page.$$('button[class="Polaris-ActionList__Item_yiyol"]')
+        imageUrlElements[0].click()
+
+        await page.waitForSelector('input[placeholder="https://"]')
+        await page.type('input[placeholder="https://"]', `${products[0].ImageLinks[counter]}`)
+
+        let buttonElements = await page.$$('div[class="Polaris-ButtonGroup__Item_yiyol"]')
+        for (let counter = 0; counter < buttonElements.length; counter++)
+        {
+            let buttonText = await page.evaluate(el => el.textContent, buttonElements[counter])
+            if(buttonText == "Add media")
+            {
+                await buttonElements[counter].click()
+                break
+            }
+        }
+    }
+}
+
+async function checkBackOrderCheckBox(page)
+{
+    await page.click('label[for="InventoryTrackingAllowOutOfStockPurchases"] span')
+}
+
+async function addShopifyTitle(page)
+{
+    await page.waitForSelector('input[name="title"]')
+    await page.waitForTimeout(500)
+    await page.click('input[name="title"]')
+    await page.type('input[name="title"]', `${products[0].Title}`)
+}
+
+async function addShopifyQuantity(page)
+{   
+    await page.waitForTimeout(250)
     await page.click('input[id="AdjustQuantityPopoverTextFieldActivator"]')
     await page.keyboard.press('Delete'); 
     await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5')
     await page.waitForTimeout(250)
+}
 
-    await page.type('input[id="PolarisTextField7"]', `${products[0].Brand}`)
+async function addShopifyDescription(page)
+{    
+    await page.waitForSelector('button[aria-describedby="PolarisTooltipContent5"]')
+    await page.click('button[aria-describedby="PolarisTooltipContent5"]')
+    await page.click('div[id="product-description_iframecontainer"]')
+    for(let counter = 0; counter < products[0].Descriptions.length; counter++)
+    {
+        await page.type('div[id="product-description_iframecontainer"]', `${products[0].Descriptions[counter]}`)
+        await page.keyboard.press('Enter'); 
+    }
+
+    await page.keyboard.press('Backspace');
 }
 
 async function logIn(page)
 {
     await page.type('input[id="account_email"]', `${username}`, {delay: 25})
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(3000)
     await page.click('button[name="commit"]')
     await page.waitForSelector('input[id="account_password"]')
     await page.type('input[id="account_password"]', `${password}`, {delay: 25})
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(3000)
     await page.click('button[name="commit"]')
 }
 
 async function scrapeAmazonItems(page)
 {
     await page.goto(urlLeftOff, { waitUntil: 'networkidle2' })
+    await getPassedBotCheck(page)
     
     //we do not know when the loop needs to end until we hit an element without an asin element
     // for(let counter = 0; ; counter++)
@@ -142,8 +228,8 @@ async function scrapeAmazonImages(page)
     {
         await pictureElements[counter].click()
         page.waitForTimeout(500)
-        let image = await page.$('img[id="landingImage"]')
-        let imageUrl = await page.evaluate(el => el.src, image)
+        let image = await page.$$('div[class="imgTagWrapper"] img')
+        let imageUrl = await page.evaluate(el => el.src, image[counter])
         
         imageUrls.push(imageUrl)
     }
