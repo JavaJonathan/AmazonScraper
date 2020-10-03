@@ -292,7 +292,7 @@ async function scrapeAmazonBrand(page)
     let brandElement = await page.$('a[id="bylineInfo"]')
     let brand = await page.evaluate(el => el.textContent, brandElement)
 
-    return brand.replace("Visit the ", "").replace("Store", "")
+    return brand.replace("Visit the ", "").replace(" Store", "")
 }
 
 class Product
