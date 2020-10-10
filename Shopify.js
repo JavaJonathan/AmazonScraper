@@ -4,20 +4,21 @@ class Shopify
 {
     constructor(){}
 
-    static async listProductsOnShopify(page)
+    static async listProductOnShopify(page, product)
     {
+        await page.bringToFront()
         await this.makeListingInactive(page)
-        await this.addShopifyTitle(page)    
-        await this.addShopifyDescription(page)
-        await this.uploadImageUrls(page)
+        await this.addShopifyTitle(page, product)    
+        await this.addShopifyDescription(page, product)
+        await this.uploadImageUrls(page, product)
 
-        await page.type('input[name="price"]', `${Amazon.products[0].Price}`) 
+        await page.type('input[name="price"]', `${product.Price}`) 
         await page.waitForTimeout(250)
 
         await this.checkBackOrderCheckBox(page)
         await this.addShopifyQuantity(page)
 
-        await page.type('input[id="PolarisTextField7"]', `${Amazon.products[0].Brand}`)
+        await page.type('input[id="PolarisTextField7"]', `${product.Brand}`)
     }
 
     static async makeListingInactive(page)
@@ -54,9 +55,9 @@ class Shopify
         }
     }
 
-    static async uploadImageUrls(page)
+    static async uploadImageUrls(page, product)
     {
-        for(let counter = 0; counter < Amazon.products[0].ImageLinks.length; counter++)
+        for(let counter = 0; counter < product.ImageLinks.length; counter++)
         {
             await page.waitForTimeout(500)
             await page.waitForSelector('button[aria-controls="Polarispopover6"]')
@@ -65,7 +66,7 @@ class Shopify
             imageUrlElements[0].click()
 
             await page.waitForSelector('input[placeholder="https://"]')
-            await page.type('input[placeholder="https://"]', `${Amazon.products[0].ImageLinks[counter]}`)
+            await page.type('input[placeholder="https://"]', `${product.ImageLinks[counter]}`)
 
             let buttonElements = await page.$$('div[class="Polaris-ButtonGroup__Item_yiyol"]')
             for (let counter = 0; counter < buttonElements.length; counter++)
@@ -85,12 +86,12 @@ class Shopify
         await page.click('label[for="InventoryTrackingAllowOutOfStockPurchases"] span')
     }
 
-    static async addShopifyTitle(page)
+    static async addShopifyTitle(page, product)
     {
         await page.waitForSelector('input[name="title"]')
         await page.waitForTimeout(500)
         await page.click('input[name="title"]')
-        await page.type('input[name="title"]', `${Amazon.products[0].Title}`)
+        await page.type('input[name="title"]', `${product.Title}`)
     }
 
     static async addShopifyQuantity(page)
@@ -102,14 +103,14 @@ class Shopify
         await page.waitForTimeout(250)
     }
 
-    static async addShopifyDescription(page)
+    static async addShopifyDescription(page, product)
     {    
         await page.waitForSelector('button[aria-describedby="PolarisTooltipContent5"]')
         await page.click('button[aria-describedby="PolarisTooltipContent5"]')
         await page.click('div[id="product-description_iframecontainer"]')
-        for(let counter = 0; counter < Amazon.products[0].Descriptions.length; counter++)
+        for(let counter = 0; counter < product.Descriptions.length; counter++)
         {
-            await page.type('div[id="product-description_iframecontainer"]', `${Amazon.products[0].Descriptions[counter]}`)
+            await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`)
             await page.keyboard.press('Enter'); 
         }
 

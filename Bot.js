@@ -11,12 +11,25 @@ class Bot
     static async start()
     {
         const browser = await puppeteer.launch({ headless: false, args: ['--start-maximized'], defaultViewport: null})
-        const AmazonPage = await browser.newPage()
+
         const ShopifyPage = await browser.newPage()
 
         await this.grabBotConfigs(ShopifyPage)
-        Amazon.scrapeAmazonItems(AmazonPage)
-        this.logInToShopify(ShopifyPage)
+        await this.logInToShopify(ShopifyPage)
+
+        const AmazonPage = await browser.newPage()
+
+        await this.findAndListProducts(ShopifyPage, AmazonPage)
+    }
+
+    static async findAndListProducts(ShopifyPage, AmazonPage)
+    {
+        let numberOfProducts = await Amazon.getNumberOfProductsToMigrate(AmazonPage)
+        for(let counter = 0; counter < numberOfProducts; counter++)
+        {
+            let newProduct = await Amazon.scrapeAmazonItems(AmazonPage, counter)
+            await Shopify.listProductOnShopify(ShopifyPage, newProduct)
+        }
     }
 
     static async grabBotConfigs(page)

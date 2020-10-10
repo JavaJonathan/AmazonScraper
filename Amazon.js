@@ -1,30 +1,35 @@
 const Product = require('./AmazonProduct.js'), Bot = require('./Bot.js'), readWrite = require('fs')
+const { listProductsOnShopify } = require('./Shopify.js')
+const Shopify = require('./Shopify.js')
 
 class Amazon 
 {
     static products = []
+    jsonProducts = []
 
     constructor(){}    
 
-    static async scrapeAmazonItems(page)
-    {
-        
-        
-        let jsonProducts = await this.getJsonProducts(page)
-        //we do not know when the loop needs to end until we hit an element without an asin element
-        for(let counter = 0; counter < jsonProducts.length; counter++)
-        {
-            await page.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
-            await this.getPassedBotCheck(page)
+    static async scrapeAmazonItems(AmazonPage, Index)
+    {   
+        await AmazonPage.bringToFront()
+        await AmazonPage.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
+        await this.getPassedBotCheck(AmazonPage)
 
-            //we need this because a tiny modal appears
-            //await page.click('a[class="a-link-normal a-text-normal"]')[0]
-            await page.waitForTimeout(250)
-            await this.findProductByAsin(page, jsonProducts[counter].asin1)
-            let newProduct = await this.scrapeProductPage(page)
-            this.products.push(newProduct)
-            await page.waitForTimeout(250)
-        }
+        //we need this because a tiny modal appears
+        //await page.click('a[class="a-link-normal a-text-normal"]')[0]
+        await AmazonPage.waitForTimeout(250)
+        await this.findProductByAsin(AmazonPage, this.jsonProducts[Index].asin1)
+
+        let newProduct = await this.scrapeProductPage(AmazonPage)
+        await AmazonPage.waitForTimeout(250)
+
+        return newProduct
+    }
+
+    static async getNumberOfProductsToMigrate(AmazonPage)
+    {
+        this.jsonProducts = await this.getJsonProducts(AmazonPage)
+        return this.jsonProducts.length
     }
 
     static async findProductByAsin(page, asin)
@@ -41,18 +46,16 @@ class Amazon
 
     static async getJsonProducts(page)
     {
-        let jsonProducts
-
         readWrite.readFile('JsonProducts.json', (error, products) => 
         {
             if(error) throw error
 
-            jsonProducts = JSON.parse(products)
+            this.jsonProducts = JSON.parse(products)
         })
 
         await page.waitForTimeout(1000)
 
-        return jsonProducts.Sheet1
+        return this.jsonProducts.Sheet1
     }
 
     static async getPassedBotCheck(page)
