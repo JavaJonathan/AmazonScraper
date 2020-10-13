@@ -1,6 +1,7 @@
 const Product = require('./AmazonProduct.js'), Bot = require('./Bot.js'), readWrite = require('fs')
 const { listProductsOnShopify } = require('./Shopify.js')
 const Shopify = require('./Shopify.js')
+const { Console } = require('console')
 
 class Amazon 
 {
@@ -11,19 +12,21 @@ class Amazon
 
     static async scrapeAmazonItems(AmazonPage, Index)
     {   
-        await AmazonPage.bringToFront()
-        await AmazonPage.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
-        await this.getPassedBotCheck(AmazonPage)
+        try
+        {
+            await AmazonPage.bringToFront()
+            await AmazonPage.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
+            await this.getPassedBotCheck(AmazonPage)
 
-        //we need this because a tiny modal appears
-        //await page.click('a[class="a-link-normal a-text-normal"]')[0]
-        await AmazonPage.waitForTimeout(250)
-        await this.findProductByAsin(AmazonPage, this.jsonProducts[Index].asin1)
+            await AmazonPage.waitForTimeout(250)
+            await this.findProductByAsin(AmazonPage, this.jsonProducts[Index].asin1)
 
-        let newProduct = await this.scrapeProductPage(AmazonPage)
-        await AmazonPage.waitForTimeout(250)
+            let newProduct = await this.scrapeProductPage(AmazonPage)
+            await AmazonPage.waitForTimeout(250)
 
-        return newProduct
+            return newProduct
+        }
+        catch(exception){ Console.log(exception) }
     }
 
     static async getNumberOfProductsToMigrate(AmazonPage)
@@ -35,13 +38,19 @@ class Amazon
     static async findProductByAsin(page, asin)
     {
         //we need to clear the text box first lol amazon
-        await page.click('input[id="twotabsearchtextbox"]', {clickCount: 4})
-
-        await page.type('input[id="twotabsearchtextbox"]', `${asin}`, {delay: 25})
-        await page.click('span[id="nav-search-submit-text"]')
-        await page.waitForSelector('span[class="a-size-medium a-color-base a-text-normal"]')
-        await page.waitForTimeout(250)
-        await page.click('span[class="a-size-medium a-color-base a-text-normal"]')
+        try
+        {
+            await page.click('input[id="twotabsearchtextbox"]', {clickCount: 4})
+            await page.type('input[id="twotabsearchtextbox"]', `${asin}`, {delay: 25})
+            await page.click('span[id="nav-search-submit-text"]')
+            await page.waitForSelector('span[class="a-size-medium a-color-base a-text-normal"]', { timeout: 1000 })
+            await page.waitForTimeout(250)
+            await page.click('span[class="a-size-medium a-color-base a-text-normal"]')
+        }
+        catch(Exception)
+        {
+            throw "Could Not Find Product"
+        }
     }
 
     static async getJsonProducts(page)
@@ -60,7 +69,14 @@ class Amazon
 
     static async getPassedBotCheck(page)
     {
-        await page.waitForSelector('input[id="twotabsearchtextbox"]')
+        try
+        {
+            await page.waitForSelector('input[id="twotabsearchtextbox"]')
+        }
+        catch(exception)
+        {
+            throw "Stuck At Bot Check"
+        }
     }
 
     static async scrapeProductPage(page)
@@ -144,8 +160,8 @@ class Amazon
 
         for(let counter = 0; counter < pictureElements.length; counter++)
         {
-            await pictureElements[counter].click()
             page.waitForTimeout(500)
+            await pictureElements[counter].click()
             let image = await page.$$('div[class="imgTagWrapper"] img')
             let imageUrl = await page.evaluate(el => el.src, image[counter])
             

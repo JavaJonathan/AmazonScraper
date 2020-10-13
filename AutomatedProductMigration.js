@@ -1,6 +1,26 @@
-const { count } = require('console'), Bot = require('./Bot.js'), { Agent } = require('http');
+const { count } = require('console'), Bot = require('./Bot.js'), { Agent } = require('http'), Shopify = require('./Shopify.js'), puppeteer = require('puppeteer'), Amazon = require('./Amazon.js');
 
-Bot.start()
+start()
+
+async function start()
+{
+    const browser = await puppeteer.launch({ headless: false, args: ['--start-maximized'], defaultViewport: null})
+    const ShopifyPage = await browser.newPage()
+
+    await Bot.grabBotConfigs(ShopifyPage)
+    await Shopify.logInToShopify(ShopifyPage)
+
+    const AmazonPage = await browser.newPage()
+
+    let numberOfProducts = await Amazon.getNumberOfProductsToMigrate(AmazonPage)
+    for(let counter = 0; counter < numberOfProducts; counter++)
+    {
+        let newProduct = await Amazon.scrapeAmazonItems(AmazonPage, counter)
+        await Shopify.listProductOnShopify(ShopifyPage, newProduct)
+        await AmazonPage.waitForTimeout(30000)
+    }
+    await Bot.sendSlackMessage()
+}
 
 //We have this download functionality for just in case
 // function download(uri, filename, callback) 

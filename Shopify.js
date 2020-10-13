@@ -1,23 +1,37 @@
-const Bot = require('./Bot.js'), Amazon = require('./Amazon.js');
+var Bot = require('./Bot.js'), Amazon = require('./Amazon.js');
 
 class Shopify
 {
+    //this will hold the sku number for the products
+    sku;
+    botConfigs;
+
     constructor(){}
 
     static async listProductOnShopify(page, product)
     {
-        await page.bringToFront()
-        await this.makeListingInactive(page)
-        await this.addShopifyTitle(page, product)    
-        await this.addShopifyDescription(page, product)
-        await this.uploadImageUrls(page, product)
+        try
+        {
+            await page.bringToFront()
+            await this.makeListingInactive(page)
+            await this.addShopifyTitle(page, product)    
+            await this.addShopifyDescription(page, product)
+            await this.uploadImageUrls(page, product)  
+            await this.addBrandAndPrice(page, product)        
+            await this.checkBackOrderCheckBox(page)
+            await this.addShopifyQuantity(page)
+            await this.addUpcAndCountry(page, product)
+        }
+        catch(exception)
+        {
+            throw exception
+        }
+    }
 
+    static async addBrandAndPrice(page, product)
+    {
         await page.type('input[name="price"]', `${product.Price}`) 
         await page.waitForTimeout(250)
-
-        await this.checkBackOrderCheckBox(page)
-        await this.addShopifyQuantity(page)
-
         await page.type('input[id="PolarisTextField7"]', `${product.Brand}`)
     }
 
@@ -81,6 +95,20 @@ class Shopify
         }
     }
 
+    static async logInToShopify(page)
+    {
+        this.botConfigs = await Bot.grabBotConfigs(page)
+
+        await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
+        await page.type('input[id="account_email"]', `${this.botConfigs.username}`, {delay: 25})
+        await page.waitForTimeout(3000)
+        await page.click('button[name="commit"]')
+        await page.waitForSelector('input[id="account_password"]')
+        await page.type('input[id="account_password"]', `${this.botConfigs.password}`, {delay: 25})
+        await page.waitForTimeout(3000)
+        await page.click('button[name="commit"]')
+    }
+
     static async checkBackOrderCheckBox(page)
     {
         await page.click('label[for="InventoryTrackingAllowOutOfStockPurchases"] span')
@@ -91,7 +119,7 @@ class Shopify
         await page.waitForSelector('input[name="title"]')
         await page.waitForTimeout(500)
         await page.click('input[name="title"]')
-        await page.type('input[name="title"]', `${product.Title}`)
+        await page.type('input[name="title"]', `${product.Title == "" ? "Coming Soon" : product.Title}`)
     }
 
     static async addShopifyQuantity(page)
@@ -108,6 +136,13 @@ class Shopify
         await page.waitForSelector('button[aria-describedby="PolarisTooltipContent5"]')
         await page.click('button[aria-describedby="PolarisTooltipContent5"]')
         await page.click('div[id="product-description_iframecontainer"]')
+
+        if(product.Descriptions.length == 0)
+        {
+            await page.type('div[id="product-description_iframecontainer"]', `Coming Soon`)
+            return
+        }
+
         for(let counter = 0; counter < product.Descriptions.length; counter++)
         {
             await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`)
@@ -115,6 +150,12 @@ class Shopify
         }
 
         await page.keyboard.press('Backspace');
+    }
+
+    static async addUpcAndCountry(page, product)
+    {
+        await page.type('input[name="barcode"]', `${product.UPC == "" ? "Coming Soon" : product.UPC}`)
+        await page.select('select[id="PolarisSelect2"]', 'US')
     }
 }
 

@@ -4,6 +4,8 @@
   "description": "",
   "main": "AmazonScraper.js",
   "dependencies": {
+    "@slack/events-api": "^2.3.4",
+    "@slack/web-api": "^5.12.0",
     "puppeteer": "^5.3.1",
     "request": "^2.88.2"
   },
