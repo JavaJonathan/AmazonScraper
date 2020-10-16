@@ -29,12 +29,12 @@ class Bot
         return botConfigs[0]
     }
 
-    static async sendSlackMessage()
+    static async sendSlackMessage(slackMessage)
     {
-        const token = this.slackSecret;
-        const web = new WebClient(token);
+        const token = this.slackSecret
+        const web = new WebClient(token)
         const conversationId = 'C01CU868ARX';
-        const res = await web.chat.postMessage({ channel: conversationId, text: 'Hello there' });
+        const res = await web.chat.postMessage({ channel: conversationId, text: slackMessage });
         console.log('Message sent: ', res.ts);
     }
 }

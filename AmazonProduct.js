@@ -6,7 +6,9 @@ class AmazonProduct
     UPC;
     Price;
     Brand;
-    constructor(title, imageLinks, descriptions, upc, price, brand)
+    Ingredients;
+
+    constructor(title, imageLinks, descriptions, upc, price, brand, ingredients)
     {
         this.Title = title
         this.ImageLinks = imageLinks
@@ -14,6 +16,7 @@ class AmazonProduct
         this.UPC = upc
         this.Price = price
         this.Brand = brand
+        this.Ingredients = ingredients
     }    
 }
 
