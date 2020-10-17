@@ -6,12 +6,14 @@ const { Console } = require('console')
 class Amazon 
 {
     static products = []
-    jsonProducts = []
+    static jsonProducts = []
+    static productAsin = ""
 
     constructor(){}    
 
     static async scrapeAmazonItems(AmazonPage, Index)
     {   
+        this.productAsin = ""
         try
         {
             await AmazonPage.bringToFront()
@@ -19,19 +21,37 @@ class Amazon
             await this.getPassedBotCheck(AmazonPage)
 
             await AmazonPage.waitForTimeout(250)
-            await this.findProductByAsin(AmazonPage, this.jsonProducts[Index].asin1)
+            this.productAsin = this.jsonProducts[Index].asin1
+            console.log(this.productAsin)
+            let alreadyAdded = await Bot.CheckIfItemHasBeenListed(AmazonPage, this.productAsin)
 
-            let newProduct = await this.scrapeProductPage(AmazonPage)
-            await AmazonPage.waitForTimeout(250)
+            if(alreadyAdded)
+            {
+                Console.log(`${this.productAsin} has already been listed.`)
+                throw "Item Already Listed"
+            }
+
+            await this.findProductByAsin(AmazonPage, this.productAsin)
+
+            let newProduct = await this.scrapeProductPage(AmazonPage, this.productAsin)
 
             return newProduct
         }
         catch(exception)
         { 
             //we do not want to be notified every time it cannot find a product but we need it for error logging
-            if(exception != "Could Not Find Product") Bot.sendSlackMessage(`Broke during Amazon listing phase. Error: ${exception}`)
-            //we need the exception to be throw to the calling class also
-            throw  
+            if(exception != "Could Not Find Product" || exception != "Item Already Listed")
+            {
+                await Bot.sendSlackMessage(`Broke during Amazon listing phase. Error: ${exception} Asin: ${this.productAsin}`)
+            }            
+            
+            if(exception != "Item Already Listed") 
+            {
+                await Bot.LogProductError(AmazonPage, this.productAsin, exception)
+            }
+
+            //we need the exception to be thrown to the calling class also
+            throw exception
         }
     }
 
@@ -43,11 +63,11 @@ class Amazon
 
     static async findProductByAsin(page, asin)
     {
-        //we need to clear the text box first lol amazon
         try
         {
+            //we need to clear the text box first lol amazon
             await page.click('input[id="twotabsearchtextbox"]', {clickCount: 4})
-            await page.type('input[id="twotabsearchtextbox"]', `${asin}`, {delay: 25})
+            await page.type('input[id="twotabsearchtextbox"]', `${asin}`)
             await page.click('span[id="nav-search-submit-text"]')
             await page.waitForSelector('span[class="a-size-medium a-color-base a-text-normal"]', { timeout: 1000 })
             await page.waitForTimeout(250)
@@ -81,11 +101,13 @@ class Amazon
         }
         catch(exception)
         {
-            Bot.sendSlackMessage("Stuck At Bot Check")
+            await Bot.sendSlackMessage("Human intervention needed, stuck at Bot Check")
+            //Gives us an hour to get the bot passed the check
+            await page.waitForSelector('input[id="twotabsearchtextbox"]', {timeout: 60000 * 60})
         }
     }
 
-    static async scrapeProductPage(page)
+    static async scrapeProductPage(page, asin)
     {
         let title = await this.scrapeAmazonTitle(page)
         let imageUrls = await this.scrapeAmazonImages(page)
@@ -95,118 +117,162 @@ class Amazon
         let brand = await this.scrapeAmazonBrand(page)
         let ingredients = await this.scrapeAmazonIngredients(page)
         
-        console.log(`${title}, ${imageUrls}, ${descriptions}, ${UPC}, ${price}, ${brand}, ingredients: ${ingredients}`)
+        console.log(`${title}, \n${imageUrls}, \n${descriptions}, \n${UPC}, \n${price}, \n${brand}, \ningredients: ${ingredients},\nasin: ${asin}`)
 
-        return new Product(title, imageUrls, descriptions, UPC, price, brand, ingredients)
+        await AmazonPage.waitForTimeout(250)
+
+        return new Product(asin, title, imageUrls, descriptions, UPC, price, brand, ingredients)
     }
 
     static async scrapeAmazonBrand(page)
     {    
-        let brandElement = await page.$('a[id="bylineInfo"]')
-        let brand = await page.evaluate(el => el.textContent, brandElement)
+        try
+        {
+            let brandElement = await page.$('a[id="bylineInfo"]')
+            let brand = await page.evaluate(el => el.textContent, brandElement)
 
-        return brand.replace("Visit the ", "").replace(" Store", "").replace("Brand: ", "")
+            return brand.replace("Visit the ", "").replace(" Store", "").replace("Brand: ", "")
+        }
+        catch(Exception)
+        {
+            throw "Error ecountered while scraping Brand"
+        }
     }
 
     static async scrapeAmazonPrice(page)
     {    
-        let priceElement = await page.$('span[id="priceblock_ourprice"]')
-        let price = await page.evaluate(el => el.textContent, priceElement)
-        return price
+        try
+        {
+            let priceElement = await page.$('span[id="priceblock_ourprice"]')
+            let price = await page.evaluate(el => el.textContent, priceElement)
+            return price
+        }
+        catch(Exception)
+        {
+            throw "Error encountered while scraping the price"
+        }
     }
 
     static async scrapeAmazonIngredients(page)
     {
-        let elements = await page.$$('div[id="important-information"] div')
-        await page.waitForTimeout(500)
-
-        let ingredients = ""
-        console.log(elements.length)
-
-        for(let counter = 0; counter < elements.length; counter++)
+        try
         {
-            let informationElement = await elements[counter].$('h4')
-            let information;
+            let elements = await page.$$('div[id="important-information"] div')
+            await page.waitForTimeout(500)
 
-            try{ information = await page.evaluate(info => info.textContent, informationElement) }
-            catch(Exception) { continue }
+            let ingredients = ""
+            console.log(elements.length)
 
-            console.log(information)
-
-            if(information == "Ingredients")
+            for(let counter = 0; counter < elements.length; counter++)
             {
-                let ingredientElement = await elements[counter].$$('p')
-                ingredients = await page.evaluate(el => el.textContent, ingredientElement[1])
-            }
-        }
+                let informationElement = await elements[counter].$('h4')
+                let information;
 
-        return ingredients
+                try{ information = await page.evaluate(info => info.textContent, informationElement) }
+                catch(Exception) { continue }
+
+                console.log(information)
+
+                if(information == "Ingredients")
+                {
+                    let ingredientElement = await elements[counter].$$('p')
+                    ingredients = await page.evaluate(el => el.textContent, ingredientElement[1])
+                }
+            }
+
+            return ingredients
+        }
+        catch(Exception)
+        {
+            throw "Exception encountered while scraping the ingredtients"
+        }
     }
 
     static async scrapeAmazonUPC(page)
     {
-        let detailElements = await page.$$('div[id="detailBullets_feature_div"] ul li')
-        await page.waitForTimeout(500)
-
-        let UPC = ""
-
-        for(let counter = 0; counter < detailElements.length; counter++)
+        try
         {
-            let detailElement = await detailElements[counter].$$('span span')
-            let detail;
+            let detailElements = await page.$$('div[id="detailBullets_feature_div"] ul li')
+            await page.waitForTimeout(500)
 
-            try{ detail = await page.evaluate(el => el.textContent, detailElement[0]) }
-            catch(Exception) { continue }
+            let UPC = ""
 
-            if(detail.replace("\n", "") == "UPC:")
+            for(let counter = 0; counter < detailElements.length; counter++)
             {
-                let upcElement = await detailElements[counter].$$('span span')
-                UPC = await page.evaluate(el => el.textContent, upcElement[1])
-            }
-        }
+                let detailElement = await detailElements[counter].$$('span span')
+                let detail;
 
-        return UPC
+                try{ detail = await page.evaluate(el => el.textContent, detailElement[0]) }
+                catch(Exception) { continue }
+
+                if(detail.replace("\n", "") == "UPC:")
+                {
+                    let upcElement = await detailElements[counter].$$('span span')
+                    UPC = await page.evaluate(el => el.textContent, upcElement[1])
+                }
+            }
+
+            return UPC
+        }
+        catch(Exception)
+        {
+            throw "Error encountered while scraping UPC"
+        }
     }
 
     static async scrapeAmazonDescription(page)
     {
-        let descriptions = []
-        
-        let descriptionElements = await page.$$('div[id="feature-bullets"] ul li')
-
-        for(let counter = 0; counter < descriptionElements.length; counter++)
+        try
         {
-            let decriptionElement = await descriptionElements[counter].$('span')
-            let description = await page.evaluate(el => el.textContent, decriptionElement)
+            let descriptions = []
             
-            //replaces all instances
-            descriptions.push(description.replace(/\n/g, ""))
-        }
+            let descriptionElements = await page.$$('div[id="feature-bullets"] ul li')
 
-        return descriptions
+            for(let counter = 0; counter < descriptionElements.length; counter++)
+            {
+                let decriptionElement = await descriptionElements[counter].$('span')
+                let description = await page.evaluate(el => el.textContent, decriptionElement)
+                
+                //replaces all instances
+                descriptions.push(description.replace(/\n/g, ""))
+            }
+
+            return descriptions
+        }
+        catch(Exception)
+        {
+            throw "Error encountered while scraping the description"
+        }
     }
 
     static async scrapeAmazonImages(page)
     {
-        await page.waitForSelector('li[class="a-spacing-small item imageThumbnail a-declarative"]')
-        let pictureElements = await page.$$('li[class="a-spacing-small item imageThumbnail a-declarative"]')
-
         let imageUrls = []
 
-        for(let counter = 0; counter < pictureElements.length; counter++)
+        try
         {
-            page.waitForTimeout(500)
-            await pictureElements[counter].click()
-            let image = await page.$$('div[class="imgTagWrapper"] img')
-            let imageUrl = await page.evaluate(el => el.src, image[counter])
-            
-            imageUrls.push(imageUrl)
+            await page.waitForSelector('li[class="a-spacing-small item imageThumbnail a-declarative"]')
+            let pictureElements = await page.$$('li[class="a-spacing-small item imageThumbnail a-declarative"]')
 
-            //we need to watch out for base64 images and log them
-            if(imageUrl.indexOf('base64') != -1)
-            { 
-                throw "Found Base64 Encoded Image"
+            for(let counter = 0; counter < pictureElements.length; counter++)
+            {
+                page.waitForTimeout(500)
+                await pictureElements[counter].click()
+                let image = await page.$$('div[class="imgTagWrapper"] img')
+                let imageUrl = await page.evaluate(el => el.src, image[counter])
+                
+                imageUrls.push(imageUrl)
+
+                //we need to watch out for base64 images and log them
+                if(imageUrl.indexOf('base64') != -1)
+                { 
+                    throw "Found Base64 Encoded Image"
+                }
             }
+        }
+        catch(Exception)
+        {
+            throw "Error encountered while scraping images"
         }
 
         return imageUrls
@@ -214,11 +280,18 @@ class Amazon
 
     static async scrapeAmazonTitle(page)
     {
-        await page.waitForSelector('span[id="productTitle"]')
-        let titleElement = await page.$('span[id="productTitle"]')
-        let title = await page.evaluate(el => el.textContent, titleElement)
+        try
+        {
+            await page.waitForSelector('span[id="productTitle"]')
+            let titleElement = await page.$('span[id="productTitle"]')
+            let title = await page.evaluate(el => el.textContent, titleElement)
 
-        return title.trim()
+            return title.trim()
+        }
+        catch(Exception)
+        {
+            throw "Error encountered while scraping the Title"
+        }
     }
 }
 

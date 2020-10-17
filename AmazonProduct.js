@@ -1,5 +1,6 @@
 class AmazonProduct
 {
+    Asin;
     Title;
     ImageLinks = []
     Descriptions = []
@@ -7,9 +8,11 @@ class AmazonProduct
     Price;
     Brand;
     Ingredients;
+    SKU;
 
-    constructor(title, imageLinks, descriptions, upc, price, brand, ingredients)
+    constructor(asin, title, imageLinks, descriptions, upc, price, brand, ingredients)
     {
+        this.Asin = asin
         this.Title = title
         this.ImageLinks = imageLinks
         this.Descriptions = descriptions
