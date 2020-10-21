@@ -65,7 +65,7 @@ class Bot
         let hour = new Date()
         hour = hour.getHours()
 
-        if(hour =! lastHourBackedUp)
+        if(hour != lastHourBackedUp)
         {
             readWrite.writeFile('logs/ErrorProductLogBackUp.json', JSON.stringify(errorLog), (error) => 
             {
