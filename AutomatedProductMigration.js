@@ -3,7 +3,7 @@ const { count } = require('console'), Bot = require('./Bot.js'), { Agent } = req
 start()
 
 async function start()
-{
+{    
     const browser = await puppeteer.launch({ headless: false, args: ['--start-maximized'], defaultViewport: null})
     const ShopifyPage = await browser.newPage()
 
@@ -19,7 +19,7 @@ async function start()
         {
             let newProduct = await Amazon.scrapeAmazonItems(AmazonPage, counter)
             await Shopify.listProductOnShopify(ShopifyPage, newProduct)
-            await AmazonPage.waitForTimeout(30000)
+            await AmazonPage.waitForTimeout(5000)
         }
         catch(exception)
         {

@@ -21,22 +21,24 @@ class Bot
             botConfigs = JSON.parse(configs)
         })
 
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(2000)
 
         lastHourBackedUp = botConfigs[0].LastHourBackedUp
-        let hour = new Date
+        let hour = new Date()
         hour = hour.getHours()
 
-        if(hour =! lastHourBackedUp)
+        if(hour != lastHourBackedUp)
         {
             readWrite.writeFile('logs/ListedItemsLogBackUp.json', JSON.stringify(listedItems), (error) => 
             {
                 if(error) throw error
             })
 
+            await page.waitForTimeout(1000)
             botConfigs[0].LastHourBackedUp = hour
+            console.log(botConfigs[0].LastHourBackedUp)
 
-            readWrite.writeFile('botConfigs.json', botConfigs, (error) => 
+            readWrite.writeFile('botConfigs.json', JSON.stringify(botConfigs), (error) => 
             {
                 if(error) throw error
             })
@@ -65,10 +67,12 @@ class Bot
 
         if(hour =! lastHourBackedUp)
         {
-            readWrite.writeFile('logs/ErrorProductsLogBackUp.json', JSON.stringify(errorLog), (error) => 
+            readWrite.writeFile('logs/ErrorProductLogBackUp.json', JSON.stringify(errorLog), (error) => 
             {
                 if(error) throw error
             })
+
+            await page.waitForTimeout(1000)
 
             botConfigs[0].LastHourBackedUp = hour
 
@@ -76,7 +80,6 @@ class Bot
             {
                 if(error) throw error
             })
-
             console.log('Listed Items Log has been backed up.')
         }
     }
@@ -121,6 +124,8 @@ class Bot
             if(error) throw error
         })
 
+        await page.waitForTimeout(2000)
+
         return botConfigs[0].sku
     }
 
@@ -135,9 +140,9 @@ class Bot
             errorLog = JSON.parse(log)
         })
 
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(2000)
 
-        let newLogEntry = {'Asin': asin, 'Time': Date.now(), 'Message': message}
+        let newLogEntry = {'Asin': asin, 'Time': new Date().toLocaleString(), 'Message': message}
 
         errorLog.push(newLogEntry)
 
@@ -146,12 +151,12 @@ class Bot
             if(error) throw error
         })
 
-        console.log("Error Logged for Asin" + asin)
+        console.log("Error Logged for Asin " + asin)
 
         await this.backUpErrorLog(page, errorLog)
     }
 
-    static async LogListedItem(page, product)
+    static async LogListedItem(page, Product)
     {
         let listedItemLog
 
@@ -162,12 +167,12 @@ class Bot
             listedItemLog = JSON.parse(log)
         })
 
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(2000)
 
         let newLogEntry = 
         {
-            'Asin': Product.asin, 
-            'TimeListed': Date.now(),
+            'Asin': Product.Asin, 
+            'TimeListed': new Date().toLocaleString(),
             'Sku': Product.SKU,
             'Title': Product.Title,
             'Description': Product.Description,
@@ -187,7 +192,7 @@ class Bot
 
         await this.backUpListedItems(page, listedItemLog)
 
-        return `Success! ${product.asin} has been listed.`
+        return `Success! ${Product.asin} has been listed.`
     }
 
     static async CheckIfItemHasBeenListed(page, asin)

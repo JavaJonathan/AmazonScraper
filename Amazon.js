@@ -1,7 +1,6 @@
 const Product = require('./AmazonProduct.js'), Bot = require('./Bot.js'), readWrite = require('fs')
 const { listProductsOnShopify } = require('./Shopify.js')
 const Shopify = require('./Shopify.js')
-const { Console } = require('console')
 
 class Amazon 
 {
@@ -22,12 +21,11 @@ class Amazon
 
             await AmazonPage.waitForTimeout(250)
             this.productAsin = this.jsonProducts[Index].asin1
-            console.log(this.productAsin)
             let alreadyAdded = await Bot.CheckIfItemHasBeenListed(AmazonPage, this.productAsin)
 
             if(alreadyAdded)
             {
-                Console.log(`${this.productAsin} has already been listed.`)
+                console.log(`${this.productAsin} has already been listed.`)
                 throw "Item Already Listed"
             }
 
@@ -40,7 +38,7 @@ class Amazon
         catch(exception)
         { 
             //we do not want to be notified every time it cannot find a product but we need it for error logging
-            if(exception != "Could Not Find Product" || exception != "Item Already Listed")
+            if(exception != "Could Not Find Product" && exception != "Item Already Listed")
             {
                 await Bot.sendSlackMessage(`Broke during Amazon listing phase. Error: ${exception} Asin: ${this.productAsin}`)
             }            
@@ -51,7 +49,7 @@ class Amazon
             }
 
             //we need the exception to be thrown to the calling class also
-            throw exception
+            throw `${exception} ${exception.stack}`
         }
     }
 
@@ -75,7 +73,7 @@ class Amazon
         }
         catch(Exception)
         {
-            throw "Could Not Find Product"
+            throw "Could Not Find Product " + Exception.stack
         }
     }
 
@@ -119,7 +117,7 @@ class Amazon
         
         console.log(`${title}, \n${imageUrls}, \n${descriptions}, \n${UPC}, \n${price}, \n${brand}, \ningredients: ${ingredients},\nasin: ${asin}`)
 
-        await AmazonPage.waitForTimeout(250)
+        await page.waitForTimeout(250)
 
         return new Product(asin, title, imageUrls, descriptions, UPC, price, brand, ingredients)
     }
@@ -135,6 +133,7 @@ class Amazon
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             throw "Error ecountered while scraping Brand"
         }
     }
@@ -145,10 +144,11 @@ class Amazon
         {
             let priceElement = await page.$('span[id="priceblock_ourprice"]')
             let price = await page.evaluate(el => el.textContent, priceElement)
-            return price
+            return price.replace("$", "")
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             throw "Error encountered while scraping the price"
         }
     }
@@ -161,7 +161,6 @@ class Amazon
             await page.waitForTimeout(500)
 
             let ingredients = ""
-            console.log(elements.length)
 
             for(let counter = 0; counter < elements.length; counter++)
             {
@@ -170,8 +169,6 @@ class Amazon
 
                 try{ information = await page.evaluate(info => info.textContent, informationElement) }
                 catch(Exception) { continue }
-
-                console.log(information)
 
                 if(information == "Ingredients")
                 {
@@ -184,7 +181,8 @@ class Amazon
         }
         catch(Exception)
         {
-            throw "Exception encountered while scraping the ingredtients"
+            console.log(Exception.stack)
+            throw "Exception encountered while scraping the ingredients"
         }
     }
 
@@ -216,6 +214,7 @@ class Amazon
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             throw "Error encountered while scraping UPC"
         }
     }
@@ -240,7 +239,8 @@ class Amazon
             return descriptions
         }
         catch(Exception)
-        {
+        { 
+            console.log(Exception.stack)
             throw "Error encountered while scraping the description"
         }
     }
@@ -251,6 +251,7 @@ class Amazon
 
         try
         {
+            page.waitForTimeout(500)
             await page.waitForSelector('li[class="a-spacing-small item imageThumbnail a-declarative"]')
             let pictureElements = await page.$$('li[class="a-spacing-small item imageThumbnail a-declarative"]')
 
@@ -272,7 +273,8 @@ class Amazon
         }
         catch(Exception)
         {
-            throw "Error encountered while scraping images"
+            console.log(Exception.stack)
+            throw `Error encountered while scraping images ${Exception}`
         }
 
         return imageUrls
@@ -290,6 +292,7 @@ class Amazon
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             throw "Error encountered while scraping the Title"
         }
     }

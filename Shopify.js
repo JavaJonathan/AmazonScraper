@@ -21,14 +21,32 @@ class Shopify
             await this.checkBackOrderCheckBox(page)
             await this.addShopifyQuantity(page)
             await this.addUpcAndCountry(page, product)
+            await this.addCompareAtPrice(page, product)
+            await this.addSku(page, product)
+            //we will discard the listings for testing
+            await this.discardItem(page)
+            //await this.saveItem(page)
             await Bot.LogListedItem(page, product)
         }
         catch(exception)
         {
             await Bot.sendSlackMessage("Broke during shopify step: " + exception)
             await Bot.LogProductError(page, product.Asin, exception)
+            await this.discardItem(page)
             throw exception
         }
+    }
+
+    static async saveItem(page)
+    {
+        await page.click('button[aria-label="Save"]')        
+    }
+
+    static async discardItem(page)
+    {
+        await page.click('button[aria-label="Discard"]')
+        await page.waitForSelector('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs Polaris-Button--destructive_zy6o5"]')
+        await page.click('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs Polaris-Button--destructive_zy6o5"]')
     }
 
     static async addSku(page, product)
@@ -60,6 +78,7 @@ class Shopify
 
     static async makeListingInactive(page)
     {
+        await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
         try
         {
             await page.waitForSelector('span[class="Polaris-Button__Text_yj3uv"]')
@@ -75,19 +94,20 @@ class Shopify
             }
 
             await page.waitForSelector('button[class="Polaris-Modal-CloseButton_bl13t"]')
-            let storeCheckBoxElements = await page.$$('span[class="Polaris-Checkbox_1d6zr"]')
+            let storeCheckBoxElements = await page.$$('span[class="Polaris-Choice__Control_1u8vs"]')
             for (let counter = 0; counter < storeCheckBoxElements.length; counter++)
             {
                 await page.waitForTimeout(250)
                 await storeCheckBoxElements[counter].click()
             }
 
-            let closeModalElements = await page.$$('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs"]')
+            let closeModalElements = await page.$$('span[class="Polaris-Button__Text_yj3uv"]')
             for (let counter = 0; counter < closeModalElements.length; counter++)
             {
                 let buttonText = await page.evaluate(el => el.textContent, closeModalElements[counter])
                 if(buttonText == "Done")
                 {
+                    console.log(buttonText)
                     await closeModalElements[counter].click()
                     break
                 }
@@ -146,6 +166,8 @@ class Shopify
             await page.type('input[id="account_password"]', `${this.botConfigs.password}`)
             await page.waitForTimeout(3000)
             await page.click('button[name="commit"]')
+            await page.waitForTimeout(3000)
+            await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
         }
         catch(Exception)
         {
@@ -157,51 +179,93 @@ class Shopify
 
     static async checkBackOrderCheckBox(page)
     {
-        await page.click('label[for="InventoryTrackingAllowOutOfStockPurchases"] span')
+        try
+        {
+            await page.click('label[for="InventoryTrackingAllowOutOfStockPurchases"] span')
+        }
+        catch(Exception)
+        {
+            console.log(Exception.stack)
+            throw "Could not check back order check box"
+        }
     }
 
     static async addShopifyTitle(page, product)
     {
-        await page.waitForSelector('input[name="title"]')
-        await page.waitForTimeout(500)
-        await page.click('input[name="title"]')
-        await page.type('input[name="title"]', `${product.Title == "" ? "Coming Soon" : product.Title}`)
+        try
+        {
+            await page.waitForSelector('input[name="title"]')
+            await page.waitForTimeout(500)
+            await page.click('input[name="title"]')
+            await page.type('input[name="title"]', `${product.Title == "" ? "Coming Soon" : product.Title}`)
+        }
+        catch(Exception)
+        {
+            console.log(Exception.stack)
+            throw "Could not add title"
+        }
     }
 
     static async addShopifyQuantity(page)
     {   
-        await page.waitForTimeout(250)
-        await page.click('input[id="AdjustQuantityPopoverTextFieldActivator"]')
-        await page.keyboard.press('Delete'); 
-        await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5')
-        await page.waitForTimeout(250)
+        try
+        {
+            await page.waitForTimeout(250)
+            await page.click('input[id="AdjustQuantityPopoverTextFieldActivator"]')
+            await page.keyboard.press('Delete'); 
+            await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5')
+            await page.waitForTimeout(250)
+        }
+        catch(Exception)
+        {
+            console.log(Exception.stack)
+            throw "Could not add quantity"
+        }
+        
     }
 
     static async addShopifyDescription(page, product)
     {    
-        await page.waitForSelector('button[aria-describedby="PolarisTooltipContent5"]')
-        await page.click('button[aria-describedby="PolarisTooltipContent5"]')
-        await page.click('div[id="product-description_iframecontainer"]')
-
-        if(product.Descriptions.length == 0)
+        try
         {
-            await page.type('div[id="product-description_iframecontainer"]', `Coming Soon`)
-            return
-        }
+            await page.waitForSelector('button[aria-describedby="PolarisTooltipContent5"]')
+            await page.click('button[aria-describedby="PolarisTooltipContent5"]')
+            await page.click('div[id="product-description_iframecontainer"]')
 
-        for(let counter = 0; counter < product.Descriptions.length; counter++)
+            if(product.Descriptions.length == 0)
+            {
+                await page.type('div[id="product-description_iframecontainer"]', `Coming Soon`)
+                return
+            }
+
+            for(let counter = 0; counter < product.Descriptions.length; counter++)
+            {
+                await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`)
+                await page.keyboard.press('Enter'); 
+            }
+
+            await page.keyboard.press('Backspace');
+        }
+        catch(Exception)
         {
-            await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`)
-            await page.keyboard.press('Enter'); 
+            console.log(Exception.stack)
+            throw "Could not add description"
         }
-
-        await page.keyboard.press('Backspace');
+        
     }
 
     static async addUpcAndCountry(page, product)
     {
-        await page.type('input[name="barcode"]', `${product.UPC == "" ? "Coming Soon" : product.UPC}`)
-        await page.select('select[id="PolarisSelect2"]', 'US')
+        try
+        {
+            await page.type('input[name="barcode"]', `${product.UPC == "" ? "Coming Soon" : product.UPC}`)
+            await page.select('select[id="PolarisSelect2"]', 'US')
+        }
+        catch(Exception)
+        {
+            console.log(Exception.stack)
+            throw "Could not add upc or country"
+        }
     }
 }
 
