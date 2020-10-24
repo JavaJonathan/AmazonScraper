@@ -15,11 +15,6 @@ class Amazon
         this.productAsin = ""
         try
         {
-            await AmazonPage.bringToFront()
-            await AmazonPage.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
-            await this.getPassedBotCheck(AmazonPage)
-
-            await AmazonPage.waitForTimeout(250)
             this.productAsin = this.jsonProducts[Index].asin1
             let alreadyAdded = await Bot.CheckIfItemHasBeenListed(AmazonPage, this.productAsin)
 
@@ -29,6 +24,11 @@ class Amazon
                 throw "Item Already Listed"
             }
 
+            await AmazonPage.bringToFront()
+            await AmazonPage.goto("https://www.amazon.com/s?me=A35CSG8GBUTFQU&fbclid=IwAR0ydIgERsEWj1VgWBm09m8rme8dWxq5zrJ7ybRpkBwKQUrhTVfZdPccYPw&marketplaceID=ATVPDKIKX0DER#ace-9766277718", { waitUntil: 'networkidle2' })
+            await this.getPassedBotCheck(AmazonPage)
+
+            await AmazonPage.waitForTimeout(250)          
             await this.findProductByAsin(AmazonPage, this.productAsin)
 
             let newProduct = await this.scrapeProductPage(AmazonPage, this.productAsin)
@@ -65,7 +65,7 @@ class Amazon
         {
             //we need to clear the text box first lol amazon
             await page.click('input[id="twotabsearchtextbox"]', {clickCount: 4})
-            await page.type('input[id="twotabsearchtextbox"]', `${asin}`)
+            await page.type('input[id="twotabsearchtextbox"]', `${asin}`, { delay:25 })
             await page.click('span[id="nav-search-submit-text"]')
             await page.waitForSelector('span[class="a-size-medium a-color-base a-text-normal"]', { timeout: 1000 })
             await page.waitForTimeout(250)
@@ -73,7 +73,8 @@ class Amazon
         }
         catch(Exception)
         {
-            throw "Could Not Find Product " + Exception.stack
+            console.log(Exception.stack)
+            throw "Could Not Find Product"
         }
     }
 
@@ -114,6 +115,8 @@ class Amazon
         let price = await this.scrapeAmazonPrice(page)
         let brand = await this.scrapeAmazonBrand(page)
         let ingredients = await this.scrapeAmazonIngredients(page)
+
+        if(ingredients != "") { descriptions = descriptions.push(ingredients) }
         
         console.log(`${title}, \n${imageUrls}, \n${descriptions}, \n${UPC}, \n${price}, \n${brand}, \ningredients: ${ingredients},\nasin: ${asin}`)
 

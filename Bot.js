@@ -23,7 +23,7 @@ class Bot
 
         await page.waitForTimeout(2000)
 
-        lastHourBackedUp = botConfigs[0].LastHourBackedUp
+        lastHourBackedUp = botConfigs[0].LastHourListedLogBackedUp
         let hour = new Date()
         hour = hour.getHours()
 
@@ -35,8 +35,8 @@ class Bot
             })
 
             await page.waitForTimeout(1000)
-            botConfigs[0].LastHourBackedUp = hour
-            console.log(botConfigs[0].LastHourBackedUp)
+            botConfigs[0].LastHourListedLogBackedUp = hour
+            console.log(botConfigs[0].LastHourListedLogBackedUp)
 
             readWrite.writeFile('botConfigs.json', JSON.stringify(botConfigs), (error) => 
             {
@@ -61,7 +61,7 @@ class Bot
 
         await page.waitForTimeout(1000)
 
-        lastHourBackedUp = botConfigs[0].LastHourBackedUp
+        lastHourBackedUp = botConfigs[0].LastHourErrorLogBackedUp
         let hour = new Date()
         hour = hour.getHours()
 
@@ -74,7 +74,7 @@ class Bot
 
             await page.waitForTimeout(1000)
 
-            botConfigs[0].LastHourBackedUp = hour
+            botConfigs[0].LastHourErrorLogBackedUp = hour
 
             readWrite.writeFile('botConfigs.json', JSON.stringify(botConfigs), (error) => 
             {
@@ -222,7 +222,7 @@ class Bot
     {
         const token = this.slackSecret
         const web = new WebClient(token)
-        const conversationId = 'C01CU868ARX';
+        const conversationId = 'C01CTSMB4KZ';
         const res = await web.chat.postMessage({ channel: conversationId, text: slackMessage });
         console.log('Message sent');
     }

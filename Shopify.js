@@ -30,6 +30,7 @@ class Shopify
         }
         catch(exception)
         {
+            console.log(exception.stack)
             await Bot.sendSlackMessage("Broke during shopify step: " + exception)
             await Bot.LogProductError(page, product.Asin, exception)
             await this.discardItem(page)
@@ -45,30 +46,39 @@ class Shopify
     static async discardItem(page)
     {
         await page.click('button[aria-label="Discard"]')
-        await page.waitForSelector('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs Polaris-Button--destructive_zy6o5"]')
-        await page.click('button[class="Polaris-Button_r99lw Polaris-Button--primary_7k9zs Polaris-Button--destructive_zy6o5"]')
+        await page.waitForSelector('span[class="Polaris-Button__Text_yj3uv"]')
+        let buttonElements = await page.$$('span[class="Polaris-Button__Text_yj3uv"]')
+            for (let counter = 0; counter < buttonElements.length; counter++)
+            {
+                let buttonText = await page.evaluate(el => el.textContent, buttonElements[counter])
+                if(buttonText == "Discard changes")
+                {
+                    await buttonElements[counter].click()
+                    break
+                }
+            }
     }
 
     static async addSku(page, product)
     {
         product.SKU = await Bot.getNextSku(page)
-        await page.type('input[name="sku"]', `${product.SKU}`)
+        await page.type('input[name="sku"]', `${product.SKU}`, { delay:25 })
     }
 
     static async addCompareAtPrice(page, product)
     {
         let compareAtPrice = product.Price * 1.3
         compareAtPrice = (Math.round(compareAtPrice * 100) / 100).toFixed(2);
-        await page.type('input[name="compareAtPrice"]', `${compareAtPrice}`)
+        await page.type('input[name="compareAtPrice"]', `${compareAtPrice}`, { delay:25 })
     }
 
     static async addBrandAndPrice(page, product)
     {
         try
         {
-            await page.type('input[name="price"]', `${product.Price}`) 
+            await page.type('input[name="price"]', `${product.Price}`, { delay:25 }) 
             await page.waitForTimeout(250)
-            await page.type('input[id="PolarisTextField7"]', `${product.Brand}`)
+            await page.type('input[id="PolarisTextField7"]', `${product.Brand}`, { delay:25 })
         }
         catch(Exception)
         {
@@ -128,13 +138,13 @@ class Shopify
                 await page.waitForTimeout(500)
                 await page.waitForSelector('button[aria-controls="Polarispopover6"]')
                 await page.click('button[aria-controls="Polarispopover6"]')
-                let imageUrlElements = await page.$$('button[class="Polaris-ActionList__Item_yiyol"]')
-                await imageUrlElements[0].click()
+                await page.waitForSelector('div[class="Polaris-ActionList__Text_yj3uv"]')
+                await page.click('div[class="Polaris-ActionList__Text_yj3uv"]')
 
                 await page.waitForSelector('input[placeholder="https://"]')
-                await page.type('input[placeholder="https://"]', `${product.ImageLinks[counter]}`)
+                await page.type('input[placeholder="https://"]', `${product.ImageLinks[counter]}`, { delay:25 })
 
-                let buttonElements = await page.$$('div[class="Polaris-ButtonGroup__Item_yiyol"]')
+                let buttonElements = await page.$$('span[class="Polaris-Button__Text_yj3uv"]')
                 for (let counter = 0; counter < buttonElements.length; counter++)
                 {
                     let buttonText = await page.evaluate(el => el.textContent, buttonElements[counter])
@@ -148,6 +158,7 @@ class Shopify
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             throw "Could not upload images"
         }
     }
@@ -159,11 +170,11 @@ class Shopify
             this.botConfigs = await Bot.grabBotConfigs(page)
 
             await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
-            await page.type('input[id="account_email"]', `${this.botConfigs.username}`)
+            await page.type('input[id="account_email"]', `${this.botConfigs.username}`, { delay:25 })
             await page.waitForTimeout(5000)
             await page.click('button[name="commit"]')
             await page.waitForSelector('input[id="account_password"]')
-            await page.type('input[id="account_password"]', `${this.botConfigs.password}`)
+            await page.type('input[id="account_password"]', `${this.botConfigs.password}`, { delay:25 })
             await page.waitForTimeout(3000)
             await page.click('button[name="commit"]')
             await page.waitForTimeout(3000)
@@ -171,6 +182,7 @@ class Shopify
         }
         catch(Exception)
         {
+            console.log(Exception.stack)
             await Bot.sendSlackMessage('Human intervention needed, could not log in.')
             //gives us an hour to help it log in
             await page.waitForSelector('span[class="Polaris-Button__Text_yj3uv"]', {timeout: 60000 * 60})
@@ -197,7 +209,7 @@ class Shopify
             await page.waitForSelector('input[name="title"]')
             await page.waitForTimeout(500)
             await page.click('input[name="title"]')
-            await page.type('input[name="title"]', `${product.Title == "" ? "Coming Soon" : product.Title}`)
+            await page.type('input[name="title"]', `${product.Title == "" ? "Coming Soon" : product.Title}`, { delay:25 })
         }
         catch(Exception)
         {
@@ -213,7 +225,7 @@ class Shopify
             await page.waitForTimeout(250)
             await page.click('input[id="AdjustQuantityPopoverTextFieldActivator"]')
             await page.keyboard.press('Delete'); 
-            await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5')
+            await page.type('input[id="AdjustQuantityPopoverTextFieldActivator"]', '5', { delay:25 })
             await page.waitForTimeout(250)
         }
         catch(Exception)
@@ -234,13 +246,13 @@ class Shopify
 
             if(product.Descriptions.length == 0)
             {
-                await page.type('div[id="product-description_iframecontainer"]', `Coming Soon`)
+                await page.type('div[id="product-description_iframecontainer"]', `Coming Soon`, { delay:25 })
                 return
             }
 
             for(let counter = 0; counter < product.Descriptions.length; counter++)
             {
-                await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`)
+                await page.type('div[id="product-description_iframecontainer"]', `${product.Descriptions[counter]}`, { delay:25 })
                 await page.keyboard.press('Enter'); 
             }
 
@@ -258,7 +270,7 @@ class Shopify
     {
         try
         {
-            await page.type('input[name="barcode"]', `${product.UPC == "" ? "Coming Soon" : product.UPC}`)
+            await page.type('input[name="barcode"]', `${product.UPC == "" ? "Coming Soon" : product.UPC}`, { delay:25 })
             await page.select('select[id="PolarisSelect2"]', 'US')
         }
         catch(Exception)
