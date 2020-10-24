@@ -138,6 +138,7 @@ class Shopify
                 await page.waitForTimeout(500)
                 await page.waitForSelector('button[aria-controls="Polarispopover6"]')
                 await page.click('button[aria-controls="Polarispopover6"]')
+                await page.waitForTimeout(500)
                 await page.waitForSelector('div[class="Polaris-ActionList__Text_yj3uv"]')
                 await page.click('div[class="Polaris-ActionList__Text_yj3uv"]')
 

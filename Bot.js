@@ -43,7 +43,7 @@ class Bot
                 if(error) throw error
             })
 
-            console.log('Listed Items Log has been backed up.')
+            console.log('Listed Items Log has been backed up.' + "\n------------------------------")
         }
     }
 
@@ -80,7 +80,7 @@ class Bot
             {
                 if(error) throw error
             })
-            console.log('Listed Items Log has been backed up.')
+            console.log('Listed Items Log has been backed up.' + "\n------------------------------")
         }
     }
 
@@ -124,7 +124,7 @@ class Bot
             if(error) throw error
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(1000)
 
         return botConfigs[0].sku
     }
@@ -140,7 +140,7 @@ class Bot
             errorLog = JSON.parse(log)
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(1000)
 
         let newLogEntry = {'Asin': asin, 'Time': new Date().toLocaleString(), 'Message': message}
 
@@ -151,7 +151,7 @@ class Bot
             if(error) throw error
         })
 
-        console.log("Error Logged for Asin " + asin)
+        console.log("Error Logged for Asin " + asin + "\n------------------------------")
 
         await this.backUpErrorLog(page, errorLog)
     }
@@ -167,7 +167,7 @@ class Bot
             listedItemLog = JSON.parse(log)
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(1000)
 
         let newLogEntry = 
         {
@@ -205,7 +205,7 @@ class Bot
             items = JSON.parse(itemsListed)
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForTimeout(1000)
 
         for(let counter = 0; counter < items.length; counter++)
         {
@@ -224,7 +224,7 @@ class Bot
         const web = new WebClient(token)
         const conversationId = 'C01CTSMB4KZ';
         const res = await web.chat.postMessage({ channel: conversationId, text: slackMessage });
-        console.log('Message sent');
+        console.log('Message sent' + "\n------------------------------");
     }
 }
 

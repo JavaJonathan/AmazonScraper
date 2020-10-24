@@ -19,13 +19,13 @@ async function start()
         {
             let newProduct = await Amazon.scrapeAmazonItems(AmazonPage, counter)
             await Shopify.listProductOnShopify(ShopifyPage, newProduct)
-            await AmazonPage.waitForTimeout(5000)
+            await AmazonPage.waitForTimeout(1000)
         }
         catch(exception)
         {
             //do nothing because we handle everything earlier, we just need what is inside of this try block to be treated as transactional
             //essentially is a psuedo transactional implmentation
-            console.log('Exception encountered: ' + exception)
+            console.log('Exception encountered: ' + exception + "\n------------------------------")
             await AmazonPage.waitForTimeout(5000)
         }
     }

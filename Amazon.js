@@ -116,7 +116,10 @@ class Amazon
         let brand = await this.scrapeAmazonBrand(page)
         let ingredients = await this.scrapeAmazonIngredients(page)
 
-        if(ingredients != "") { descriptions = descriptions.push(ingredients) }
+        if(ingredients != "") { descriptions.push(ingredients) }
+
+        //Requirement to append a value onto the listing so we know the bot listed it
+        title = title + "*"
         
         console.log(`${title}, \n${imageUrls}, \n${descriptions}, \n${UPC}, \n${price}, \n${brand}, \ningredients: ${ingredients},\nasin: ${asin}`)
 
@@ -151,9 +154,19 @@ class Amazon
         }
         catch(Exception)
         {
+            //do nothing, we are trying another method of scraping below
+        }
+        try
+        {
+            let priceElement = await page.$('span[id="priceblock_pospromoprice"]')
+            let price = await page.evaluate(el => el.textContent, priceElement)
+            return price.replace("$", "")
+        }
+        catch(Exception)
+        {
             console.log(Exception.stack)
             throw "Error encountered while scraping the price"
-        }
+        }        
     }
 
     static async scrapeAmazonIngredients(page)
@@ -213,6 +226,8 @@ class Amazon
                 }
             }
 
+            if(UPC != "") { Bot.sendSlackMessage('Found a UPC ' + UPC) }
+
             return UPC
         }
         catch(Exception)
@@ -260,7 +275,7 @@ class Amazon
 
             for(let counter = 0; counter < pictureElements.length; counter++)
             {
-                page.waitForTimeout(500)
+                await page.waitForTimeout(1000)
                 await pictureElements[counter].click()
                 let image = await page.$$('div[class="imgTagWrapper"] img')
                 let imageUrl = await page.evaluate(el => el.src, image[counter])
