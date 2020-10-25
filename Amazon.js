@@ -116,7 +116,7 @@ class Amazon
         let brand = await this.scrapeAmazonBrand(page)
         let ingredients = await this.scrapeAmazonIngredients(page)
 
-        if(ingredients != "") { descriptions.push(ingredients) }
+        if(ingredients != "") { descriptions.push("Ingredients: " + ingredients) }
 
         //Requirement to append a value onto the listing so we know the bot listed it
         title = title + "*"
