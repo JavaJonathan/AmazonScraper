@@ -43,7 +43,7 @@ class Bot
                 if(error) throw error
             })
 
-            console.log('Listed Items Log has been backed up.' + "\n------------------------------")
+            console.log('Listed Items Log has been backed up.')
         }
     }
 
@@ -80,7 +80,7 @@ class Bot
             {
                 if(error) throw error
             })
-            console.log('Listed Items Log has been backed up.' + "\n------------------------------")
+            console.log('Error Product Log has been backed up.')
         }
     }
 
@@ -151,7 +151,7 @@ class Bot
             if(error) throw error
         })
 
-        console.log("Error Logged for Asin " + asin + "\n------------------------------")
+        console.log(`------------------------------\nError Logged for Asin: ${asin} \n------------------------------`)
 
         await this.backUpErrorLog(page, errorLog)
     }

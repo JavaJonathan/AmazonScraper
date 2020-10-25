@@ -49,7 +49,7 @@ class Amazon
             }
 
             //we need the exception to be thrown to the calling class also
-            throw `${exception} ${exception.stack}`
+            throw `${exception} ${exception.stack == undefined ? "" : exception.stack}`
         }
     }
 
@@ -73,7 +73,6 @@ class Amazon
         }
         catch(Exception)
         {
-            console.log(Exception.stack)
             throw "Could Not Find Product"
         }
     }
@@ -140,7 +139,7 @@ class Amazon
         catch(Exception)
         {
             console.log(Exception.stack)
-            throw "Error ecountered while scraping Brand"
+            return ""
         }
     }
 
@@ -267,9 +266,25 @@ class Amazon
     {
         let imageUrls = []
 
+        //we need to try this method of scraping the images because amazon changes how they display images on certain listings
         try
         {
-            page.waitForTimeout(500)
+            let image = await page.$('img[id="imgBlkFront"]')
+            let imageUrl = await page.evaluate(el => el.src, image)
+                
+            imageUrls.push(imageUrl)
+            return imageUrls
+        }
+        catch(Exception)
+        {
+            // we only need to clear the array becuase we have another method of scraping to attempt below
+            // we need to clear the image array so it does not effect the images return from the scraping method below 
+            imageUrls = []
+        }
+
+        try
+        {
+            await page.waitForTimeout(500)
             await page.waitForSelector('li[class="a-spacing-small item imageThumbnail a-declarative"]')
             let pictureElements = await page.$$('li[class="a-spacing-small item imageThumbnail a-declarative"]')
 

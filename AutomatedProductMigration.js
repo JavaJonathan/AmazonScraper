@@ -25,8 +25,13 @@ async function start()
         {
             //do nothing because we handle everything earlier, we just need what is inside of this try block to be treated as transactional
             //essentially is a psuedo transactional implmentation
-            console.log('Exception encountered: ' + exception + "\n------------------------------")
-            await AmazonPage.waitForTimeout(5000)
+            //we need the space because the exception could have the execution stack attached
+            if(exception != "Item Already Listed ") 
+            {
+                console.log(`Exception encountered: ${exception}`)
+                await AmazonPage.waitForTimeout(5000)
+            }            
         }
+        console.log(`Progress: ${counter}\\${numberOfProducts}`)
     }
 }
