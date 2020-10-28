@@ -13,7 +13,8 @@ class Shopify
         try
         {
             await page.bringToFront()
-            await this.makeListingInactive(page)
+            //Shopify made an update so we no longer need this
+            //await this.makeListingInactive(page)
             await this.addShopifyTitle(page, product)    
             await this.addShopifyDescription(page, product)
             await this.uploadImageUrls(page, product)  
@@ -24,9 +25,10 @@ class Shopify
             await this.addCompareAtPrice(page, product)
             await this.addSku(page, product)
             //we will discard the listings for testing
-            await this.discardItem(page)
-            //await this.saveItem(page)
+            //await this.discardItem(page)
+            await this.saveItem(page)
             await Bot.LogListedItem(page, product)
+            console.log('Done listing ' + product.Asin )
         }
         catch(exception)
         {
@@ -88,7 +90,6 @@ class Shopify
 
     static async makeListingInactive(page)
     {
-        await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
         try
         {
             await page.waitForSelector('span[class="Polaris-Button__Text_yj3uv"]')
@@ -135,10 +136,10 @@ class Shopify
         {
             for(let counter = 0; counter < product.ImageLinks.length; counter++)
             {
-                await page.waitForTimeout(500)
+                await page.waitForTimeout(1000)
                 await page.waitForSelector('button[aria-controls="Polarispopover6"]')
                 await page.click('button[aria-controls="Polarispopover6"]')
-                await page.waitForTimeout(500)
+                await page.waitForTimeout(1000)
                 await page.waitForSelector('div[class="Polaris-ActionList__Text_yj3uv"]')
                 await page.click('div[class="Polaris-ActionList__Text_yj3uv"]')
 
@@ -205,6 +206,7 @@ class Shopify
 
     static async addShopifyTitle(page, product)
     {
+        await page.goto('https://pbdcollectibles.myshopify.com/admin/products/new', { waitUntil: 'networkidle2' })
         try
         {
             await page.waitForSelector('input[name="title"]')

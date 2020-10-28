@@ -133,6 +133,14 @@ class Bot
     {
         let errorLog
 
+        let errorLogExists = await this.checkIfErrorLogExists(page, asin)
+
+        if(errorLogExists) 
+        { 
+            console.log('Product Error Already Logged ' + asin) 
+            return 
+        }
+
         readWrite.readFile('logs/ErrorProductLog.json', (error, log) => 
         {
             if(error) throw error
@@ -203,6 +211,30 @@ class Bot
             if(error) throw error
 
             items = JSON.parse(itemsListed)
+        })
+
+        await page.waitForTimeout(1000)
+
+        for(let counter = 0; counter < items.length; counter++)
+        {
+            if(items[counter].Asin == asin)
+            {
+                return true
+            }
+        }      
+
+        return false
+    }
+
+    //we don't want to log the error item if it has already been logged
+    static async checkIfErrorLogExists(page, asin)
+    {
+        let items
+        readWrite.readFile('logs/ErrorProductLog.json', (error, errorLogs) => 
+        {
+            if(error) throw error
+
+            items = JSON.parse(errorLogs)
         })
 
         await page.waitForTimeout(1000)

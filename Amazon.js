@@ -115,13 +115,11 @@ class Amazon
         let brand = await this.scrapeAmazonBrand(page)
         let ingredients = await this.scrapeAmazonIngredients(page)
 
-        if(ingredients != "") { descriptions.push("Ingredients: " + ingredients) }
+        if(ingredients != "") { descriptions.push(ingredients) }
 
         //Requirement to append a value onto the listing so we know the bot listed it
         title = title + "*"
         
-        console.log(`${title}, \n${imageUrls}, \n${descriptions}, \n${UPC}, \n${price}, \n${brand}, \ningredients: ${ingredients},\nasin: ${asin}`)
-
         await page.waitForTimeout(250)
 
         return new Product(asin, title, imageUrls, descriptions, UPC, price, brand, ingredients)
@@ -148,6 +146,16 @@ class Amazon
         try
         {
             let priceElement = await page.$('span[id="priceblock_ourprice"]')
+            let price = await page.evaluate(el => el.textContent, priceElement)
+            return price.replace("$", "")
+        }
+        catch(Exception)
+        {
+            //do nothing, we are trying another method of scraping below
+        }
+        try
+        {
+            let priceElement = await page.$('span[id="price"]')
             let price = await page.evaluate(el => el.textContent, priceElement)
             return price.replace("$", "")
         }
@@ -191,6 +199,8 @@ class Amazon
                     ingredients = await page.evaluate(el => el.textContent, ingredientElement[1])
                 }
             }
+
+            if(!ingredients.includes("Ingredients:") && ingredients != "") ingredients = "Ingredients: " + ingredients
 
             return ingredients
         }
@@ -249,6 +259,11 @@ class Amazon
                 let decriptionElement = await descriptionElements[counter].$('span')
                 let description = await page.evaluate(el => el.textContent, decriptionElement)
                 
+                //we need this here as a test, remove later
+                if(description.includes('fitsby')) console.log(description)
+
+                if(description == " Make sure this fitsby entering your model number.") continue
+
                 //replaces all instances
                 descriptions.push(description.replace(/\n/g, ""))
             }
@@ -269,6 +284,7 @@ class Amazon
         //we need to try this method of scraping the images because amazon changes how they display images on certain listings
         try
         {
+            await page.waitForTimeout(500)
             let image = await page.$('img[id="imgBlkFront"]')
             let imageUrl = await page.evaluate(el => el.src, image)
                 
